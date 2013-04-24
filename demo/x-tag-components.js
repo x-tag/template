@@ -1,7 +1,8 @@
+
 if (!(document.register || {}).__polyfill__){
 
   (function(){
-    
+
     var win = window,
       doc = document,
       tags = {},
@@ -10,34 +11,47 @@ if (!(document.register || {}).__polyfill__){
       mutation = win.MutationObserver || win.WebKitMutationObserver ||  win.MozMutationObserver,
       _createElement = doc.createElement,
       register = function(name, options){
-        if (!tags[name]) tokens.push(name);
-        options = options || {};
+        name = name.toLowerCase();
+        var base,
+            token = name,
+            options = options || {};
+
+        if (!options.prototype) {
+          throw new Error('Missing required prototype property for registration of the ' + name + ' element');
+        }
+
         if (options.prototype && !('setAttribute' in options.prototype)) {
           throw new TypeError("Unexpected prototype for " + name + " element - custom element prototypes must inherit from the Element interface");
         }
-        var _prototype = options.prototype || Object.create((win.HTMLSpanElement || win.HTMLElement).prototype),
-            lifecycle = options.lifecycle || {},
-            tag = tags[name] = {
+
+        if (options.extends){
+          var ancestor = (tags[options.extends] || _createElement.call(doc, options.extends)).constructor;
+          if (ancestor != (win.HTMLUnknownElement || win.HTMLElement)) {
+            base = options.extends;
+            token = '[is="' + name + '"]';
+          }
+        }
+
+        tokens.push(token);
+
+        var tag = tags[name] = {
+              base: base,
               'constructor': function(){
                 return doc.createElement(name);
               },
-              _prototype: doc.__proto__ ? null : unwrapPrototype(_prototype),
-              'prototype': _prototype,
-              'fragment': options.fragment || doc.createDocumentFragment(),
-              'lifecycle': {
-                created: lifecycle.created || function(){},
-                removed: lifecycle.removed || function(){},
-                inserted: lifecycle.inserted || function(){},
-                attributeChanged: lifecycle.attributeChanged || function(){}
-              }
+              _prototype: doc.__proto__ ? null : unwrapPrototype(options.prototype),
+              'prototype': options.prototype
             };
+
         tag.constructor.prototype = tag.prototype;
+
         if (domready) query(doc, name).forEach(function(element){
           upgrade(element, true);
         });
+
         return tag.constructor;
       };
-    
+
     function unwrapPrototype(proto){
       var definition = {},
           names = Object.getOwnPropertyNames(proto),
@@ -47,11 +61,11 @@ if (!(document.register || {}).__polyfill__){
       }
       return definition;
     }
-    
+
     function typeOf(obj) {
       return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase();
     }
-    
+
     function clone(item, type){
       var fn = clone[type || typeOf(item)];
       return fn ? fn(item) : item;
@@ -66,22 +80,22 @@ if (!(document.register || {}).__polyfill__){
         while (i--) array[i] = clone(src[i]);
         return array;
       };
-    
+
     var unsliceable = ['number', 'boolean', 'string', 'function'];
     function toArray(obj){
-      return unsliceable.indexOf(typeof obj) == -1 ? 
+      return unsliceable.indexOf(typeof obj) == -1 ?
       Array.prototype.slice.call(obj, 0) :
       [obj];
     }
-    
+
     function query(element, selector){
       return element && selector && selector.length ? toArray(element.querySelectorAll(selector)) : [];
     }
-    
+
     function getTag(element){
-      return element.nodeName ? tags[element.nodeName.toLowerCase()] : false;
+      return element.getAttribute ? tags[element.getAttribute('is') || element.nodeName.toLowerCase()] : false;
     }
-    
+
     function manipulate(element, fn){
       var next = element.nextSibling,
         parent = element.parentNode,
@@ -94,49 +108,29 @@ if (!(document.register || {}).__polyfill__){
         parent.appendChild(returned);
       }
     }
-    
-    function upgrade(element, replace){
-      if (!element._elementupgraded && !element._suppressObservers) {
+
+    function upgrade(element){
+      if (!element._elementupgraded) {
         var tag = getTag(element);
         if (tag) {
-          var upgraded = element;
-          if (replace) {
-            element._suppressObservers = true;
-            manipulate(element, function(){
-              upgraded = _createElement.call(doc, element.nodeName);
-              upgraded._suppressObservers = true;
-              while (element.firstChild) upgraded.appendChild(element.firstChild);
-              var index = element.attributes.length;
-              while (index--) {
-                var attr = element.attributes[index];
-                upgraded.setAttribute(attr.name, attr.value);
-              }
-              return upgraded;
-            });
-          }
-          if (doc.__proto__) upgraded.__proto__ = tag.prototype;
-          else Object.defineProperties(upgraded, tag._prototype);
-          upgraded.constructor = tag.constructor;
-          upgraded._elementupgraded = true;
-          if (!mutation) delete upgraded._suppressObservers;
-          tag.lifecycle.created.call(upgraded, tag.prototype);
-          if (replace) fireEvent(element, 'elementreplace', { upgrade: upgraded }, { bubbles: false });
-          fireEvent(upgraded, 'elementupgrade');
+          if (doc.__proto__) element.__proto__ = tag.prototype;
+          else Object.defineProperties(element, tag._prototype);
+          element.constructor = tag.constructor;
+          element._elementupgraded = true;
+          if (element.readyCallback) element.readyCallback.call(element, tag.prototype);
         }
       }
     }
-    
+
     function inserted(element, event){
+
       var tag = getTag(element);
+      console.log("inserted", tag, element);
       if (tag){
-        if (!element._elementupgraded) upgrade(element, true);
+        if (!element._elementupgraded) upgrade(element);
         else {
-          if (element._suppressObservers) {
-            delete element._suppressObservers;
-            return element;
-          }
-          if (!element._suppressObservers && doc.documentElement.contains(element)) {
-            tag.lifecycle.inserted.call(element);
+          if (doc.documentElement.contains(element) && element.insertedCallback) {
+            element.insertedCallback.call(element);
           }
           insertChildren(element);
         }
@@ -146,23 +140,20 @@ if (!(document.register || {}).__polyfill__){
 
     function insertChildren(element){
       if (element.childNodes.length) query(element, tokens).forEach(function(el){
-        if (!el._elementupgraded) upgrade(el, true);
-        getTag(el).lifecycle.inserted.call(el);
+        if (!el._elementupgraded) upgrade(el);
+        if (el.insertedCallback) el.insertedCallback.call(el);
       });
     }
-    
+
     function removed(element){
       if (element._elementupgraded) {
-        if (element._suppressObservers) delete element._suppressObservers;
-        else {
-          getTag(element).lifecycle.removed.call(element);
-          if (element.childNodes.length) query(element, tokens).forEach(function(el){
-            removed(el);
-          });
-        }
+        if (element.removedCallback) element.removedCallback.call(element);
+        if (element.childNodes.length) query(element, tokens).forEach(function(el){
+          removed(el);
+        });
       }
     }
-    
+
     function addObserver(element, type, fn){
       if (!element._records) {
         element._records = { inserted: [], removed: [] };
@@ -188,7 +179,7 @@ if (!(document.register || {}).__polyfill__){
       }
       if (element._records[type].indexOf(fn) == -1) element._records[type].push(fn);
     }
-    
+
     function removeObserver(element, type, fn){
       var obj = element._records;
       if (obj && fn){
@@ -198,7 +189,7 @@ if (!(document.register || {}).__polyfill__){
         obj[type] = [];
       }
     }
-      
+
     function parseMutations(element, mutations) {
       var diff = { added: [], removed: [] };
       mutations.forEach(function(record){
@@ -215,7 +206,7 @@ if (!(document.register || {}).__polyfill__){
         }
       });
     }
-      
+
     function fireEvent(element, type, data, options){
       options = options || {};
       var event = doc.createEvent('Event');
@@ -227,40 +218,43 @@ if (!(document.register || {}).__polyfill__){
     var polyfill = !doc.register;
     if (polyfill) {
       doc.register = register;
-      
+
       doc.createElement = function createElement(tag){
-        var element = _createElement.call(doc, tag);
+        var base = tags[tag] ? tags[tag].base : null;
+            element = _createElement.call(doc, base || tag);
+        if (base) element.setAttribute('is', tag);
         upgrade(element);
         return element;
       };
-      
-      var _setAttribute = Element.prototype.setAttribute;   
+
+      var _setAttribute = Element.prototype.setAttribute;
       Element.prototype.setAttribute = function(attr, value, skip){
         var tag = getTag(this),
             last = this.getAttribute(attr);
         _setAttribute.call(this, attr, value);
         if (tag && last != this.getAttribute(attr)) {
-          tag.lifecycle.attributeChanged.call(this, attr, value, last, skip);
-        } 
+          if (this.attributeChangedCallback) this.attributeChangedCallback.call(this, attr, value, last, skip);
+        }
       };
-      
+
       var initialize = function (){
         addObserver(doc.documentElement, 'inserted', inserted);
         addObserver(doc.documentElement, 'removed', removed);
-        
+
         if (tokens.length) query(doc, tokens).forEach(function(element){
-          upgrade(element, true);
+          upgrade(element);
         });
-        
+
         domready = true;
+        fireEvent(doc, 'WebComponentsReady');
         fireEvent(doc, 'DOMComponentsLoaded');
         fireEvent(doc, '__DOMComponentsLoaded__');
       };
-      
+
       if (doc.readyState == 'complete') initialize();
-      else doc.addEventListener(doc.readyState == 'interactive' ? 'readystatechange' : 'DOMContentLoaded', initialize); 
+      else doc.addEventListener(doc.readyState == 'interactive' ? 'readystatechange' : 'DOMContentLoaded', initialize);
     }
-    
+
     doc.register.__polyfill__ = {
       query: query,
       clone: clone,
@@ -316,14 +310,13 @@ if (!(document.register || {}).__polyfill__){
     },
     prefix = (function () {
       var styles = win.getComputedStyle(doc.documentElement, ''),
-        pre = (Array.prototype.slice
-          .call(styles)
-          .join('') 
-          .match(/-(moz|webkit|ms)-/) || (styles.OLink === '' && ['', 'o'])
-        )[1],
-        dom = ('WebKit|Moz|MS|O').match(new RegExp('(' + pre + ')', 'i'))[1];
+          pre = (Array.prototype.slice
+            .call(styles)
+            .join('')
+            .match(/-(moz|webkit|ms)-/) || (styles.OLink === '' && ['', 'o'])
+          )[1];
       return {
-        dom: dom,
+        dom: pre == 'ms' ? pre.toUpperCase() : pre,
         lowercase: pre,
         css: '-' + pre + '-',
         js: pre[0].toUpperCase() + pre.substr(1)
@@ -331,18 +324,18 @@ if (!(document.register || {}).__polyfill__){
 
     })(),
     matchSelector = Element.prototype.matchesSelector || Element.prototype[prefix.lowercase + 'MatchesSelector'];
-  
+
 /*** Internal Functions ***/
 
   // Mixins
-  
+
   function mergeOne(source, key, current){
     var type = xtag.typeOf(current);
     if (type == 'object' && xtag.typeOf(source[key]) == 'object') xtag.merge(source[key], current);
     else source[key] = xtag.clone(current, type);
     return source;
   }
-  
+
   function mergeMixin(type, mixin, option) {
     var original = {};
     for (var o in option) original[o.split(':')[0]] = true;
@@ -367,7 +360,7 @@ if (!(document.register || {}).__polyfill__){
     });
     return tag;
   }
-  
+
 /*** X-Tag Object Definition ***/
 
   var xtag = {
@@ -391,11 +384,11 @@ if (!(document.register || {}).__polyfill__){
       var _name = name.toLowerCase();
       var tag = xtag.tags[_name] = applyMixins(xtag.merge({}, xtag.defaultOptions, options));
       xtag.attributeSetters[_name] = {};
-      
+
       for (var z in tag.events) tag.events[z] = xtag.parseEvent(z, tag.events[z]);
       for (var z in tag.lifecycle) tag.lifecycle[z.split(':')[0]] = xtag.applyPseudos(z, tag.lifecycle[z], tag.pseudos);
       for (var z in tag.methods) tag.prototype[z.split(':')[0]] = { value: xtag.applyPseudos(z, tag.methods[z], tag.pseudos) };
-      
+
       for (var prop in tag.accessors) {
         tag.prototype[prop] = {};
         var accessor = tag.accessors[prop];
@@ -408,33 +401,40 @@ if (!(document.register || {}).__polyfill__){
           else tag.prototype[prop][z] = accessor[z];
         }
       }
-  
+
       var attributeChanged = tag.lifecycle.attributeChanged;
-      tag.lifecycle.attributeChanged = function (attr, value, last, skip) {
-        var setter = xtag.attributeSetters[_name][attr.toLowerCase()];
-        if (!skip && setter) this[setter] = value;
-        return attributeChanged ? attributeChanged.apply(this, xtag.toArray(arguments)) : null;
+      tag.prototype.attributeChangedCallback = {
+        value: function(attr, value, last, skip){
+          var setter = xtag.attributeSetters[_name][attr.toLowerCase()];
+          if (!skip && setter) this[setter] = value;
+          return attributeChanged ? attributeChanged.apply(this, xtag.toArray(arguments)) : null;
+        }
+       };
+
+      var ready = tag.lifecycle.created || tag.lifecycle.ready;
+      tag.prototype.readyCallback = {
+        value: function(){
+          var element = this;
+          tag.pseudos.forEach(function(obj){
+            obj.onAdd.call(element, obj);
+          });
+          xtag.addEvents(this, tag.events);
+          tag.mixins.forEach(function(mixin){
+            if (xtag.mixins[mixin].events) xtag.addEvents(element, xtag.mixins[mixin].events);
+          });
+          return ready ? ready.apply(this, xtag.toArray(arguments)) : null;
+        }
       };
 
-      var created = tag.lifecycle.created;
-      tag.lifecycle.created = function () {
-        var element = this;
-        tag.pseudos.forEach(function(obj){
-          obj.onAdd.call(element, obj);
-        });
-        xtag.addEvents(this, tag.events);
-        tag.mixins.forEach(function(mixin){
-          if (xtag.mixins[mixin].events) xtag.addEvents(element, xtag.mixins[mixin].events);
-        });
-        return created ? created.apply(this, xtag.toArray(arguments)) : null;
-      };
-      
-      var proto = doc.register(_name, {
-        'prototype': 'nodeName' in tag.prototype ? tag.prototype : Object.create((win.HTMLSpanElement || win.HTMLElement).prototype, tag.prototype),
-        'lifecycle':  tag.lifecycle
+      if (tag.lifecycle.inserted) tag.prototype.insertedCallback = { value: tag.lifecycle.inserted };
+      if (tag.lifecycle.removed) tag.prototype.removedCallback = { value: tag.lifecycle.removed };
+
+      var constructor = doc.register(_name, {
+        'extends': options.extends,
+        'prototype': Object.create((options.extends ? document.createElement(options.extends).constructor : win.HTMLElement).prototype, tag.prototype)
       });
-      
-      return proto;
+
+      return constructor;
     },
 
   /*** Exposed Variables ***/
@@ -516,7 +516,7 @@ if (!(document.register || {}).__polyfill__){
   /*** Utilities ***/
 
     // JS Types
-    
+
     wrap: function (original, fn) {
       return function () {
         var args = xtag.toArray(arguments),
@@ -524,7 +524,7 @@ if (!(document.register || {}).__polyfill__){
         return returned === false ? false : fn.apply(this, typeof returned != 'undefined' ? xtag.toArray(returned) : args);
       };
     },
-    
+
     merge: function(source, k, v){
       if (xtag.typeOf(k) == 'string') return mergeOne(source, k, v);
       for (var i = 1, l = arguments.length; i < l; i++){
@@ -543,10 +543,19 @@ if (!(document.register || {}).__polyfill__){
       });
     },
 
+    requestFrame: (function(){
+      var raf = win.requestAnimationFrame ||
+        win[prefix.lowercase + 'RequestAnimationFrame'] ||
+        function(fn){ return win.setTimeout(fn, 20) };
+      return function(fn){
+        return raf.call(win, fn);
+      }
+    })(),
+
     matchSelector: function (element, selector) {
       return matchSelector.call(element, selector);
     },
-    
+
     innerHTML: function (element, html) {
       element.innerHTML = html;
       if (xtag._polyfilled) {
@@ -700,13 +709,13 @@ if (!(document.register || {}).__polyfill__){
         element.removeEventListener(name, fn);
       });
     },
-    
+
     removeEvents: function(element, listeners){
       for (var z in listeners) xtag.removeEvent(element, z, listeners[z]);
     }
-    
+
   };
-  
+
   xtag.typeOf = doc.register.__polyfill__.typeOf;
   xtag.clone = doc.register.__polyfill__.clone;
   xtag.merge(xtag, doc.register.__polyfill__);
