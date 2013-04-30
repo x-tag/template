@@ -41,7 +41,6 @@
   xtag.mixins.template = {
     lifecycle:{
       created: function(){
-        console.log('element using template mixin created');
         var template = this.getAttribute('template');
         if (template){
           xtag.fireEvent(this, 'templatechange', { template: template });
@@ -51,7 +50,6 @@
     accessors: {
       template:{
         get: function(){
-          console.log("template:get");
           return this.getAttribute('template');
         },
         'set:attribute(template)': function(value){
@@ -64,7 +62,6 @@
   };
 
   document.addEventListener('templatechange', function(event){
-    console.log("templatechange", event.template);
     var template = xtag.query(document, 'x-template[name="' + event.template + '"]')[0];
     if (template) xtag.fireEvent(template, 'templatechange', { templateTarget: event.target }, { bubbles: false });
   }, false);
@@ -74,7 +71,6 @@
       created: function(){
         this.xtag.templateListeners = {};
         this.script = this.script;
-        console.log('x-template created')
       }
     },
     accessors: {
