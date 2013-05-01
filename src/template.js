@@ -34,7 +34,6 @@
   xtag.pseudos.templateTarget = {
     action: function(pseudo, e, args){
       e.templateTarget = this;
-      pseudo.listener.call(this, e);
     }
   };
 
