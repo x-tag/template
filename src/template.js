@@ -48,10 +48,11 @@
     },
     accessors: {
       template:{
+        attribute: {},
         get: function(){
           return this.getAttribute('template');
         },
-        'set:attribute(template)': function(value){
+        set: function(value){
           var attr = this.getAttribute('template');
           this.xtag.__previousTemplate__ = attr;
           xtag.fireEvent(this, 'templatechange', { template: value });
