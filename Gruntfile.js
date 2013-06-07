@@ -18,9 +18,19 @@ module.exports = function(grunt) {
       file: 'package.json',
       prefix: 'xtag-v',
       commit: true
+    },
+    connect: {
+      hostit: {
+        options: {
+            port: 9001,
+            base: './',
+            keepalive: true
+        }
+      }
     }
   });
 
+  grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-bumpup');
