@@ -38,44 +38,6 @@
 
 <x-template name="fancy-comment">
   <template>
-    <div>
-      <b><div class="user"></div></b>
-      <textarea></textarea>
-      <span class="date"></span>
-      <button>Clicky</button>
-    </div>
-  </template>
-  <script type="template">
-      var self = this;
-      this.addTemplateListeners({
-        'click:delegate(button)': function(e){
-          self.updateProperties(e.templateTarget, {'comment': 'Crusty Cold!'});
-        }
-      });
-
-      this.addBindings({
-        'user:select(div.user)': function(value){
-          this.innerHTML = value;
-        },
-        'comment:select(div > textarea)': function(value){
-			console.log(this, arguments);
-          this.innerHTML = value;
-        },
-        'date:select(span.date)': function(value){
-          this.innerHTML = value;
-        },
-        'user-hover:select(div.user)': function(value){
-          this.setAttribute('title', value);
-        },
-      });
-
-  </script>
-</x-template>
-
-
-
-<x-template name="fancy-comment">
-  <template>
     <section>
       <div>FOO</div>
       <b></b>

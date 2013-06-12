@@ -17,13 +17,13 @@
     if (template) template.attachTemplate(event.target);
   }
 
-  function getScriptElement(){
-    return this.querySelector('script[type="template"]') || createScript(this);
+  function getScriptElement(template){
+    return template.querySelector('script[type="template"]') || createScript(template);
   }
 
   function projectPropertyBindings(template, element, frag){
-    var bindings = this.xtag.bindings,
-        map = templateMaps[this.name] ? templateMaps[this.name][element.nodeName.toLowerCase()] : null;
+    var bindings = template.xtag.bindings,
+        map = getMap(template.name, element);
     for (var key in bindings){
       var prop = map && map[key] ? map[key] : null,
           value = getElementValue(element, prop, key);
@@ -49,8 +49,8 @@
     return value;
   }
 
-  function getMappings(name, element){
-      return templateMaps[name] ? templateMaps[name][element.nodeName.toLowerCase()] : null;
+  function getMap(name, element){
+      return templateMaps[name] ? templateMaps[name][element.nodeName.toLowerCase()] : {};
   }
 
   xtag.pseudos.templateTarget = {
@@ -77,43 +77,37 @@ XTemplate = xtag.register('x-template', {
     lifecycle: {
       created: function(){
         this.xtag.bindings = {}, this.xtag.templateListeners = {}, this.xtag.attached = [];
-        var templateName = this.getAttribute('name');
-        templates[templateName] = this;
         this.script = this.script;
-      },
-      attributeChanged: function(name, newValue, oldValue){
-        if (name == 'name') {
-          templates[newValue] = templates[oldValue];
-          // run detach template
-          delete templates[oldValue];
-        }
       }
     },
+    
     accessors: {
       name: {
         attribute: {},
         set: function(value){
-          console.log('name is set');
-          //this.render();
+          delete templates[this.getAttribute('name')];
+          if (value) templates[value] = this;
+          if (this.xtag._ready) this.render();
+          else this.xtag._ready = true;
         }
       },
       script: {
         get: function(){
-          return getScriptElement.call(this).textContent;
+          return getScriptElement(this).textContent;
         },
         set: function(script){
           this._dumpTemplateEvents();
-          getScriptElement.call(this).textContent = String(script);
+          getScriptElement(this).textContent = String(script);
           this.xtag.templateScript = (typeof script == 'function' ? script : new Function(script)).bind(this);
           this.xtag.templateScript();
         }
       }
     },
+    
     methods:{
       render: function(elements){
-        var template = this;
-        var content = this.querySelector('template').content;
-        console.log('calling render')
+        var template = this,
+            content = this.querySelector('template').content;
         xtag.toArray(elements ? (elements.xtag ? [elements] : elements) :
           window.document.querySelectorAll('[template="' + this.name + '"]')).forEach(function(element){
             if (element.xtag) {
@@ -125,6 +119,7 @@ XTemplate = xtag.register('x-template', {
             }
         });
       },
+      
       addTemplateListeners: function(events){
         for (var key in events) {
           var split = key.split(':');
@@ -134,18 +129,20 @@ XTemplate = xtag.register('x-template', {
           this.xtag.templateListeners[join].push(xtag.addEvent(window.document, join, events[key]));
         }
       },
+      
       addBindings: function(obj){
         var bindings = this.xtag.bindings;
         for (var key in obj) {
           bindings[key.split(':')[0]] = xtag.applyPseudos(key, obj[key]);
         }
       },
+      
       attachTemplate: function(element){
         var attached = this.xtag.attached;
         if (attached.indexOf(element) == -1) attached.push(element);
-        console.log('attach template');
         this.render(element);
       },
+      
       detachTemplate: function(element){
         var attached = this.xtag.attached,
             index = attached.indexOf(element);
@@ -154,32 +151,33 @@ XTemplate = xtag.register('x-template', {
       removeTemplateListener: function(type, fn){
         xtag.removeEvent(window.document, type, fn);
       },
+      
       _dumpTemplateEvents: function(){
         for (var z in this.xtag.templateListeners) this.xtag.templateListeners[z].forEach(function(fn){
           xtag.removeEvent(window.document, z, fn);
         });
       },
+      
       updateProperties: function(element, properties){
         for (var prop in properties){
           this.updateProperty(element, prop, properties[prop]);
         }
       },
+      
       updateProperty: function(element, key, value){
-        var mappings = getMappings(this.name, element);
-        if (mappings && mappings[key]){
-          var prop = mappings[key].key || mappings[key];
-          element[prop] = value;
-        }
-        else element[key] = value;
+        var map = getMap(this.name, element),
+            prop = map[key];
+        element[prop ? prop.key || prop : key] = value;
       },
+      
       updateBindingValue: function(element, key, value){
-        var mappings = getMappings(this.name, element);
-        var bindings = this.xtag.bindings;
+        var map = getMap(this.name, element),
+            bindings = this.xtag.bindings;
         if (bindings[key]){
           bindings[key].call(element, value, element);
         }
-        if (mappings) for (var item in mappings){
-          if (typeof mappings[item] == 'string' && mappings[item] == key || mappings[item].key == key){
+        for (var item in map){
+          if (map[item] == key || map[item].key == key){
             bindings[item].call(element, value, element);
           }
         }
