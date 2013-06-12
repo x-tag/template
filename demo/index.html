@@ -96,14 +96,14 @@
         'user': 'username',
         'user-hover': {
           key: 'firstName',
-          action: function(element, value){
-            return element.firstName + " " + element.lastName;
+          action: function(value){
+            return this.firstName + " " + this.lastName;
           }
         },
         'comment':'text',
         'date': {
           key: 'postDate',
-          action: function(element, value){
+          action: function(value){
             return new Date(Number(value)).toLocaleDateString();
           }
         }

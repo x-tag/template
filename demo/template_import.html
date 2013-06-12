@@ -18,17 +18,17 @@
       });
 
       this.addBindings({
-        'user:select(span.user)': function(element, value){
-          element.innerHTML = value;
+        'user:select(span.user)': function(value){
+          this.innerHTML = value;
         },
-        'comment:select(div > textarea)': function(element, value){
-          element.innerHTML = value;
+        'comment:select(div > textarea)': function(value){
+          this.innerHTML = value;
         },
-        'date:select(span.date)': function(element, value){
-          element.innerHTML = value;
+        'date:select(span.date)': function(value){
+          this.innerHTML = value;
         },
-        'user-hover:select(div.user)': function(element, value){
-          element.setAttribute('title', value);
+        'user-hover:select(div.user)': function(evalue){
+          this.setAttribute('title', value);
         },
       });
 
@@ -54,17 +54,18 @@
       });
 
       this.addBindings({
-        'user:select(div.user)': function(element, value){
-          element.innerHTML = value;
+        'user:select(div.user)': function(value){
+          this.innerHTML = value;
         },
-        'comment:select(div > textarea)': function(element, value){
-          element.innerHTML = value;
+        'comment:select(div > textarea)': function(value){
+			console.log(this, arguments);
+          this.innerHTML = value;
         },
-        'date:select(span.date)': function(element, value){
-          element.innerHTML = value;
+        'date:select(span.date)': function(value){
+          this.innerHTML = value;
         },
-        'user-hover:select(div.user)': function(element, value){
-          element.setAttribute('title', value);
+        'user-hover:select(div.user)': function(value){
+          this.setAttribute('title', value);
         },
       });
 
