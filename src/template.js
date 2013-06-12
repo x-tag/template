@@ -1,34 +1,56 @@
-
 (function(){
+
+  var templates = {};
+  var templateMappings = {};
 
   function createScript(element, type){
     var script = document.createElement('script');
-    script.type = 'template/' + type;
+    script.type = 'template';
     element.appendChild(script);
     return script;
   }
 
-  function getPath(object, path){
-    if (typeof path == 'string') path = path.split('.');
-    var len = path.length, i = 0;
-    while (len--){
-      object = (object || {})[path[i++]];
-      if (!len) return object;
+  function switchTemplate(event){
+    var previous = templates[event.target.xtag.__previousTemplate__];
+    if (previous) previous.detachTemplate(event.templateTarget);
+    this.attachTemplate(event.target);
+  }
+
+  function getScriptElement(){
+    return this.querySelector('script[type="template"]') || createScript(this, 'script');
+  }
+
+  function projectPropertyBindings(element, frag){
+    var mappings = templateMappings[this.name] ?
+        templateMappings[this.name][element.nodeName.toLowerCase()] : null,
+      bindings = this.xtag.bindings;
+    for (var key in bindings){
+      var mapping = mappings && mappings[key] ? mappings[key] : null,
+        value = getElementValue(element, mapping, key);
+      bindings[key].call(element, frag, value);
     }
   }
 
-  function substitute(str, object, regexp) {
-    return String(str).replace(regexp || (/\\?\{([^{}]+)\}|%7B([^%7B,%7D]+)\%7D/g), function(match, name1, name2) {
-      var name = name1 || name2;
-      if (match.charAt(0) == '\\') return match.slice(1);
-      if (object[name] !== undefined) return object[name];
-      var value = getPath(object, name);
-      return (value === null || value === undefined) ? '' : value;
-    });
+  function setBinding(key, bindingfn, element, frag, mappings){
+    var mapping = mappings && mappings[key] ? mappings[key] : null;
+    var value = getElementValue(element, mapping, key);
+    bindingfn.call(element, frag, value);
   }
 
-  function renderTemplate(element, html, data){
-    return substitute(html, data||{});
+  function getElementValue(element, mapping, key){
+    var value;
+    if (typeof mapping == 'string'){
+      value = element[mapping];
+    } else if (mapping){
+      value = mapping.action ? mapping.action.call(null, element, element[mapping.key]) : element[mapping.key];
+    } else {
+      value = element[key];
+    }
+    return value;
+  }
+
+  function getMappings(name, element){
+      return templateMappings[name] ? templateMappings[name][element.nodeName.toLowerCase()] : null;
   }
 
   xtag.pseudos.templateTarget = {
@@ -37,160 +59,151 @@
     }
   };
 
-  xtag.mixins.template = {
-    lifecycle:{
-      created: function(){
-        var template = this.getAttribute('template');
-        if (template){
-          xtag.fireEvent(this, 'templatechange', { template: template });
-        }
-      }
-    },
-    accessors: {
-      template:{
-        attribute: {},
-        get: function(){
-          return this.getAttribute('template');
-        },
-        set: function(value){
-          var attr = this.getAttribute('template');
-          this.xtag.__previousTemplate__ = attr;
-          xtag.fireEvent(this, 'templatechange', { template: value });
-        }
+  xtag.pseudos.select = {
+    action: function(pseudo, e, args){
+      var self = this;
+      var fn = pseudo.listener;
+      return pseudo.listener = function(){
+        xtag.query(e, pseudo.value).forEach(function(match){
+          fn.call(self, match, args);
+        });
       }
     }
-  };
+  }
 
-  document.addEventListener('templatechange', function(event){
-    var template = xtag.query(document, 'x-template[name="' + event.template + '"]')[0];
-    if (template) xtag.fireEvent(template, 'templatechange', { templateTarget: event.target }, { bubbles: false });
+  window.addEventListener('templatechange', function(event){
+    var template = templates[event.template];
+    if (template) switchTemplate.call(template, event);
   }, false);
 
-  xtag.register('x-template', {
+XTemplate = xtag.register('x-template', {
     lifecycle: {
       created: function(){
-        this.xtag.templateListeners = {};
+        this.xtag.bindings = {}, this.xtag.templateListeners = {}, this.xtag.attached = [];
+        var templateName = this.getAttribute('name');
+        templates[templateName] = this;
         this.script = this.script;
+      },
+      attributeChanged: function(name, newValue, oldValue){
+        if (name == 'name') {
+          templates[newValue] = templates[oldValue];
+          // run detach template
+          delete templates[oldValue];
+        }
       }
     },
     accessors: {
-      renderer: {
-        get: function(){
-          return this.xtag.renderer || renderTemplate;
-        },
-        set: function(fn){
-          this.xtag.renderer = fn;
-        }
-      },
-      beforeRender: {
-        get: function(){
-          return this.xtag.beforeRender;
-        },
-        set: function(fn){
-          this.xtag.beforeRender = fn;
-        }
-      },
       name: {
-        get: function(){
-          return this.getAttribute('name');
-        },
-        set: function(name){
-          this.setAttribute('name', name);
-          this.render();
-        }
-      },
-      scriptElement: {
-        get: function(){
-          return this.querySelector('script[type="template/script"]') || createScript(this, 'script');
-        }
-      },
-      contentElement: {
-        get: function(){
-          return this.querySelector('script[type="template/content"]') || createScript(this, 'content');
+        attribute: {},
+        set: function(value){
+          console.log('name is set');
+          //this.render();
         }
       },
       script: {
         get: function(){
-          return this.scriptElement.textContent;
+          return getScriptElement.call(this).textContent;
         },
         set: function(script){
           this._dumpTemplateEvents();
-          this.scriptElement.textContent = String(script);
+          getScriptElement.call(this).textContent = String(script);
           this.xtag.templateScript = (typeof script == 'function' ? script : new Function(script)).bind(this);
           this.xtag.templateScript();
         }
-      },
-      content: {
-        get: function(){
-          return this.contentElement.innerHTML;
-        },
-        set: function(content){
-          this.contentElement.innerHTML = content;
-          this.render();
-        }
       }
     },
-    methods: {
+    methods:{
+      render: function(elements){
+        var self = this;
+        var template = this.querySelector('template').content;
+        console.log('calling render')
+        xtag.toArray(elements ? (elements.xtag ? [elements] : elements) :
+          window.document.querySelectorAll('[template="' + this.name + '"]')).forEach(function(element){
+            if (element.xtag) {
+              element.xtag.template = self;
+              var frag = template.cloneNode(true);
+              projectPropertyBindings.call(self, element, frag);
+              element.innerHTML = '';
+              element.appendChild(frag);
+            }
+        });
+      },
+      addTemplateListeners: function(events){
+        for (var type in events) {
+          var split = type.split(':');
+            split.splice(1, 0, 'delegate([template="'+ this.name +'"]):templateTarget'),
+            fn = events[type];
+          type = split.join(':');
+          this.xtag.templateListeners[type] = this.xtag.templateListeners[type] || [];
+          this.xtag.templateListeners[type].push(xtag.addEvent(window.document, type, fn));
+        }
+      },
+      addBindings: function(bindings){
+        var store = this.xtag.bindings;
+        for (var key in bindings) {
+          var name = key.split(':')[0];
+          store[name] = xtag.applyPseudos(key, bindings[key]);
+        }
+      },
       attachTemplate: function(element){
-        var attached = this.xtag.attached = (this.xtag.attached || []);
+        var attached = this.xtag.attached;
         if (attached.indexOf(element) == -1) attached.push(element);
+        console.log('attach template');
         this.render(element);
       },
       detachTemplate: function(element){
-        var attached = this.xtag.attached = (this.xtag.attached || []),
+        var attached = this.xtag.attached,
           index = attached.indexOf(element);
         if (index != -1) attached.splice(index, 1);
       },
-      render: function(elements){
-        var name = this.name;
-        if (name) {
-          var content = this.content;
-          xtag.toArray(elements ? (elements.xtag ? [elements] : elements) : document.querySelectorAll('[template="' + name + '"]')).forEach(function(element){
-            if (element.xtag) {
-              for (var setter in this.xtag.templateSetters){
-                var fn = this.xtag.templateSetters[setter],
-                  prop = Object.getOwnPropertyDescriptor(element,setter);
-                if (prop && prop.set){
-                  var templateSetter = fn;
-                  var oldSetter = prop.set;
-                  fn = function(value){
-                    oldSetter.call(element, value);
-                    templateSetter.call(element, value);
-                  };
-                }
-                xtag.applyAccessor(element, setter, "set", fn);
-              }
-              element.innerHTML = this.renderer.call(this, element, content, element.templateData);
-            }
-          }, this);
-        }
-      },
-      addTemplateListener: function(type, fn){
-        var split = type.split(':');
-          split.splice(1, 0, 'delegate([template="'+ this.name +'"]):templateTarget');
-        type = split.join(':');
-        this.xtag.templateListeners[type] = this.xtag.templateListeners[type] || [];
-        this.xtag.templateListeners[type].push(xtag.addEvent(document, type, fn));
-      },
-      addTemplateListeners: function(events){
-         for (var z in events) this.addTemplateListener(z, events[z]);
-      },
       removeTemplateListener: function(type, fn){
-        xtag.removeEvent(document, type, fn);
+        xtag.removeEvent(window.document, type, fn);
       },
       _dumpTemplateEvents: function(){
         for (var z in this.xtag.templateListeners) this.xtag.templateListeners[z].forEach(function(fn){
-          xtag.removeEvent(document, z, fn);
+          xtag.removeEvent(window.document, z, fn);
         });
-      }
-    },
-    events: {
-      'templatechange': function(event){
-        var previous = xtag.query(document, 'x-template[name="' + event.templateTarget.xtag.__previousTemplate__ + '"]')[0];
-        if (previous) previous.detachTemplate(event.templateTarget);
-        this.attachTemplate(event.templateTarget);
+      },
+      updateProperties: function(element, properties){
+        for (var prop in properties){
+          this.updateProperty(element, prop, properties[prop]);
+        }
+      },
+      updateProperty: function(element, key, value){
+        var mappings = getMappings(this.name, element);
+        if (mappings && mappings[key]){
+          var key = typeof mappings[key] == 'string' ? mappings[key] : mappings[key].key;
+          element[key] = value;
+        } else {
+          element[key] = value;
+        }
+      },
+      updateBindingValue: function(element, key, value){
+        var mappings = getMappings(this.name, element);
+        var bindings = this.xtag.bindings;
+        if (bindings[key]){
+          bindings[key].call(null, element, value);
+        }
+        if (mappings) for (var item in mappings){
+          if (typeof mappings[item] == 'string' && mappings[item] == key || mappings[item].key == key){
+            bindings[item].call(null, element, value);
+          }
+        }
       }
     }
+
   });
+
+  XTemplate.mapProperties = function(name, elementName, map){
+    if (!templateMappings[name]) templateMappings[name] = {};
+    templateMappings[name][elementName] = map;
+    var template = templates[name];
+    if (template){
+      xtag.query(window.document, elementName + '[template="' + name +'"]').forEach(function(element){
+        projectPropertyBindings.call(template, element, element);
+      });
+    }
+  }
+
 
 })();

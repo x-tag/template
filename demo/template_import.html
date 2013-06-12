@@ -1,0 +1,95 @@
+
+<x-template name="comment">
+  <template>
+    <div>
+      <label>By: <span class="user"></span></label>
+      <textarea></textarea>
+      <br>
+      <span class="date"></span>
+      <button>Update</button>
+    </div>
+  </template>
+  <script type="template">
+      var self = this;
+      this.addTemplateListeners({
+        'click:delegate(button)': function(e){
+          self.updateProperties(e.templateTarget, {'comment': 'Warm and sunny!'});
+        }
+      });
+
+      this.addBindings({
+        'user:select(span.user)': function(element, value){
+          element.innerHTML = value;
+        },
+        'comment:select(div > textarea)': function(element, value){
+          element.innerHTML = value;
+        },
+        'date:select(span.date)': function(element, value){
+          element.innerHTML = value;
+        },
+        'user-hover:select(div.user)': function(element, value){
+          element.setAttribute('title', value);
+        },
+      });
+
+  </script>
+</x-template>
+
+
+<x-template name="fancy-comment">
+  <template>
+    <div>
+      <b><div class="user"></div></b>
+      <textarea></textarea>
+      <span class="date"></span>
+      <button>Clicky</button>
+    </div>
+  </template>
+  <script type="template">
+      var self = this;
+      this.addTemplateListeners({
+        'click:delegate(button)': function(e){
+          self.updateProperties(e.templateTarget, {'comment': 'Crusty Cold!'});
+        }
+      });
+
+      this.addBindings({
+        'user:select(div.user)': function(element, value){
+          element.innerHTML = value;
+        },
+        'comment:select(div > textarea)': function(element, value){
+          element.innerHTML = value;
+        },
+        'date:select(span.date)': function(element, value){
+          element.innerHTML = value;
+        },
+        'user-hover:select(div.user)': function(element, value){
+          element.setAttribute('title', value);
+        },
+      });
+
+  </script>
+</x-template>
+
+
+
+<x-template name="fancy-comment">
+  <template>
+    <section>
+      <div>FOO</div>
+      <b></b>
+      <span></span>
+      <button>Clicky</button>
+    </section>
+    <ul>
+    </ul>
+  </template>
+  <script type="template">
+
+  </script>
+</x-template>
+
+
+<script type="text/javascript">
+  console.log('imports');
+</script>
