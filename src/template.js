@@ -13,7 +13,7 @@
   function switchTemplate(event){
     var previous = templates[event.target.xtag.__previousTemplate__];
     if (previous) previous.detachTemplate(event.templateTarget);
-    var template = templates[event.template];
+    var template = templates[event.detail.template];
     if (template) template.attachTemplate(event.target);
   }
 
@@ -80,7 +80,7 @@ XTemplate = xtag.register('x-template', {
         this.script = this.script;
       }
     },
-    
+
     accessors: {
       name: {
         attribute: {},
@@ -103,7 +103,7 @@ XTemplate = xtag.register('x-template', {
         }
       }
     },
-    
+
     methods:{
       render: function(elements){
         var template = this,
@@ -111,7 +111,7 @@ XTemplate = xtag.register('x-template', {
         xtag.toArray(elements ? (elements.xtag ? [elements] : elements) :
           window.document.querySelectorAll('[template="' + this.name + '"]')).forEach(function(element){
             if (element.xtag) {
-              element.xtag.template = template;
+              element.xtag.__view__ = template;
               var frag = content.cloneNode(true);
               projectPropertyBindings(template, element, frag);
               element.innerHTML = '';
@@ -119,7 +119,7 @@ XTemplate = xtag.register('x-template', {
             }
         });
       },
-      
+
       addTemplateListeners: function(events){
         for (var key in events) {
           var split = key.split(':');
@@ -129,20 +129,20 @@ XTemplate = xtag.register('x-template', {
           this.xtag.templateListeners[join].push(xtag.addEvent(window.document, join, events[key]));
         }
       },
-      
+
       addBindings: function(obj){
         var bindings = this.xtag.bindings;
         for (var key in obj) {
           bindings[key.split(':')[0]] = xtag.applyPseudos(key, obj[key]);
         }
       },
-      
+
       attachTemplate: function(element){
         var attached = this.xtag.attached;
         if (attached.indexOf(element) == -1) attached.push(element);
         this.render(element);
       },
-      
+
       detachTemplate: function(element){
         var attached = this.xtag.attached,
             index = attached.indexOf(element);
@@ -151,25 +151,26 @@ XTemplate = xtag.register('x-template', {
       removeTemplateListener: function(type, fn){
         xtag.removeEvent(window.document, type, fn);
       },
-      
+
       _dumpTemplateEvents: function(){
         for (var z in this.xtag.templateListeners) this.xtag.templateListeners[z].forEach(function(fn){
           xtag.removeEvent(window.document, z, fn);
         });
       },
-      
+
       updateProperties: function(element, properties){
         for (var prop in properties){
           this.updateProperty(element, prop, properties[prop]);
         }
       },
-      
+
       updateProperty: function(element, key, value){
         var map = getMap(this.name, element),
             prop = map[key];
+        var p = prop ? prop.key || prop : key;
         element[prop ? prop.key || prop : key] = value;
       },
-      
+
       updateBindingValue: function(element, key, value){
         var map = getMap(this.name, element),
             bindings = this.xtag.bindings;

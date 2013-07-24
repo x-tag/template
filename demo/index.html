@@ -7,10 +7,9 @@
     <link rel="stylesheet" type="text/css" href="x-tag-components.css"/>
     <link rel="stylesheet" type="text/css" href="../src/template.css"/>
 
-    <script type="text/javascript" src="x-tag-components-updated.js"></script>
+    <script type="text/javascript" src="x-tag-components.js"></script>
     <script type="text/javascript" src="../src/template.js"></script>
 
-    <script></script>
     <link rel="import" href="template_import.html" />
 
   </head>
@@ -91,7 +90,7 @@
   });
 
   document.addEventListener('DOMComponentsLoaded', function(){
-
+    console.log('loaded', XTemplate);
     XTemplate.mapProperties('comment', 'x-comment', {
         'user': 'username',
         'user-hover': {

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Template - X-Tag</title>
+    <link rel="stylesheet" type="text/css" href="../demo/x-tag-components.css"/>
+    <link rel="stylesheet" type="text/css" href="../src/template.css"/>
+
+    <script type="text/javascript" src="../demo/x-tag-components.js"></script>
+    <script type="text/javascript" src="../src/template.js"></script>
+
+    <link rel="import" href="element_import.html" />
+    <link rel="import" href="template_import.html" />
+
+    <style type="text/css">
+      app-todo {
+        margin-top: 10px;
+      }
+    </style>
+
+  </head>
+
+<body>
+
+
+  <app-todo
+    template="todo-show"
+    task="Get stuff done"
+    completed="false">
+  </app-todo>
+
+  <app-todo
+    template="todo-show"
+    task="Buy toothbrush"
+    completed="true">
+  </app-todo>
+
+
+</body>
+
+
+</html>

@@ -1,0 +1,69 @@
+
+
+<x-template name="todo-show">
+  <style type="text/css">
+   [template="todo-show"] .edit {
+    color: blue;
+    text-decoration: underline;
+   }
+  </style>
+  <template>
+    <div class="task"></div>
+    <input type="checkbox" class="completed">Done
+    <a class="edit">edit</a>
+  </template>
+  <script type="template">
+      var self = this;
+      if (this != window){
+
+        this.addTemplateListeners({
+          'change:delegate(.completed)': function(e){
+            self.updateProperties(e.templateTarget, {'completed': !this.hasAttribute('checked') });
+          },
+          'click:delegate(.edit)': function(e){
+            e.templateTarget.template = 'todo-edit';
+          }
+        });
+
+        this.addBindings({
+          'task:select(.task)': function(value){
+            this.innerHTML = value;
+          },
+          'completed:select(.completed)': function(value){
+            if (value) {
+              this.setAttribute('checked','') ;
+            } else {
+              this.removeAttribute('checked');
+            }
+          }
+        });
+      }
+  </script>
+</x-template>
+
+
+<x-template name="todo-edit">
+  <template>
+    <input class="task">
+    <button>Save</button>
+  </template>
+  <script type="template">
+      var self = this;
+      if (this != window){
+
+        this.addTemplateListeners({
+          'click:delegate(button)': function(e){
+            var task = e.templateTarget.querySelector('.task').value;
+            self.updateProperties(e.templateTarget, {'task': task });
+            e.templateTarget.template = 'todo-show';
+          }
+        });
+
+        this.addBindings({
+          'task:select(.task)': function(value){
+            this.value = value;
+          }
+        });
+      }
+  </script>
+</x-template>

@@ -11,26 +11,30 @@
   </template>
   <script type="template">
       var self = this;
-      this.addTemplateListeners({
-        'click:delegate(button)': function(e){
-          self.updateProperties(e.templateTarget, {'comment': 'Warm and sunny!'});
-        }
-      });
+      if (this != window){
 
-      this.addBindings({
-        'user:select(span.user)': function(value){
-          this.innerHTML = value;
-        },
-        'comment:select(div > textarea)': function(value){
-          this.innerHTML = value;
-        },
-        'date:select(span.date)': function(value){
-          this.innerHTML = value;
-        },
-        'user-hover:select(div.user)': function(evalue){
-          this.setAttribute('title', value);
-        },
-      });
+        this.addTemplateListeners({
+          'click:delegate(button)': function(e){
+            console.log('click', self, e.templateTarget);
+            self.updateProperties(e.templateTarget, {'comment': 'Warm and sunny!'});
+          }
+        });
+
+        this.addBindings({
+          'user:select(span.user)': function(value){
+            this.innerHTML = value;
+          },
+          'comment:select(div > textarea)': function(value){
+            this.innerHTML = value;
+          },
+          'date:select(span.date)': function(value){
+            this.innerHTML = value;
+          },
+          'user-hover:select(div.user)': function(evalue){
+            this.setAttribute('title', value);
+          },
+        });
+      }
 
   </script>
 </x-template>
@@ -53,6 +57,3 @@
 </x-template>
 
 
-<script type="text/javascript">
-  console.log('imports');
-</script>

@@ -1,0 +1,96 @@
+Web Component model using a Template/View
+
+
+
+
+<x-template name="todo-show">
+  <template>
+    <div class="title"></div>
+    <input type="checkbox" class="completed">
+    <a class="edit">edit</a>
+  </template>
+  <script type="template">
+      var self = this;
+      if (this != window){
+
+        this.addTemplateListeners({
+          'change': function(e){
+            self.updateProperties(e.templateTarget, {'completed': this.hasAttribute('checked') });
+          },
+          'click:delegate(.edit)': function(e){
+            e.templateTarget.template = 'todo-edit';
+          }
+        });
+
+        this.addBindings({
+          'title:select(.title)': function(value){
+            this.innerHTML = value;
+          },
+          'completed:select(.completed)': function(value){
+            if (value) {
+              this.setAttribute('checked','') ;
+            } else {
+              this.removeAttribute('checked');
+            }
+          }
+        });
+      }
+  </script>
+</x-template>
+
+
+<x-template name="todo-edit">
+  <template>
+    <input class="title">
+    <button>Save</button>
+  </template>
+  <script type="template">
+      var self = this;
+      if (this != window){
+
+        this.addTemplateListeners({
+          'change': function(e){
+            self.updateProperties(e.templateTarget, {'completed': this.hasAttribute('checked') });
+          },
+          'click:delegate(button)': function(e){
+            var title = e.templateTarget.querySelector('.title').value;
+            self.updateProperties(e.templateTarget, {'title': title });
+            e.templateTarget.template = 'todo-show';
+          }
+        });
+
+        this.addBindings({
+          'title:select(.title)': function(value){
+            this.innerHTML = value;
+          }
+        });
+      }
+  </script>
+</x-template>
+
+
+
+
+
+
+var DocumentRow = Backbone.View.extend({
+
+  tagName: "li",
+
+  className: "document-row",
+
+  events: {
+    "click .icon":          "open",
+    "click .button.edit":   "openEditDialog",
+    "click .button.delete": "destroy"
+  },
+
+  initialize: function() {
+    this.listenTo(this.model, "change", this.render);
+  }
+
+  render: function() {
+    ...
+  }
+
+});
