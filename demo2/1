@@ -36,6 +36,19 @@ var Todo = xtag.register('app-todo', {
       get: function(){
         return (this.getAttribute('completed') == "true");
       }
+    },
+    date: {
+      get: function(){
+        return this.xtag.data.date;
+      },
+      set: function(value){
+        this.xtag.data.date = value;
+      }
+    }
+  },
+  methods:{
+    blah: function(){
+
     }
   }
 });
@@ -44,7 +57,7 @@ var Todo = xtag.register('app-todo', {
 var todo2 = document.createElement('app-todo');
 
 var todo = new Todo();   // this is an html element
-todo.task = 'Hello';
+todo.task = 'Hello World';
 todo.setAttribute('completed', true);
 
 
