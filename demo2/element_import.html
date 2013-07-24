@@ -5,25 +5,26 @@
 </style>
 <script type="text/javascript">
 
-var Todo = xtag.register('app-todo', {
-  accessors: {
-    task: {
-      attribute: {}
-    },
-    completed: {
-      attribute: {},
-      get: function(){
-        return (this.getAttribute('completed') == "true");
+  var Todo = xtag.register('app-todo', {
+    accessors: {
+      task: {
+        attribute: {}
+      },
+      completed: {
+        attribute: {},
+        get: function(){
+          return (this.getAttribute('completed') == "true");
+        }
       }
     }
+  });
+
+
+  Todo.find = function(search, callback){
+
+    //ajax call to return more items
+
+
   }
-});
-
-
-Todo.find = function(search, callback){
-
-  //
-
-}
 
 </script>

@@ -2,7 +2,7 @@ Web Component model using declaritive syntax and a template imported via HTMLimp
 
 <element name="app-todo" constructor="Todo">
   <template>
-    <div class="title"></div>
+    <div class="task"></div>
     <input type="checkbox" class="completed">
   </template>
   <script>
@@ -14,21 +14,24 @@ Web Component model using declaritive syntax and a template imported via HTMLimp
       xtag.register(this, {
         lifecycle: {
           created: function{
+            // set innerHTML with template content
             this.innerHTML = content.cloneNode(true);
-            this.title = this.title;
+
+            // set initial values from attributes
+            this.task = this.task;
             this.completed = this.completed;
           }
         },
         events: {
-          'change': function(){
-            //do something when checkbox is changed
+          'change:delegate(.completed)': function(e){
+            e.targetElement.completed = this.hasAttribute('checked');
           }
         },
         accessors: {
-          title: {
+          task: {
             attribute: {},
             set: function(value){
-              this.querySelector('.title').innerHTML = value;
+              this.querySelector('.task').innerHTML = value;
             }
           },
           completed: {
@@ -52,8 +55,10 @@ Web Component model using declaritive syntax and a template imported via HTMLimp
   </script>
 </element>
 
+
+
 var todo = new Todo();   // this is an html element
-todo.title = 'Hello';
+todo.task = 'Hello';
 todo.setAttribute('completed', true);
 OR
 todo.completed = true;
@@ -62,9 +67,11 @@ todo.completed = true;
 body.appendChild(todo);
 
 <body>
-  <app-todo title="Hello" completed="true">
-    <div class="title">Hello</div>
+  <app-todo task="Hello" completed="true">
+    <div class="task">Hello</div>
     <input type="checkbox" checked class="completed">
   </app-todo>
 </body>
 
+
+Main disadvantage is that the model is bound directly to a visual representation.

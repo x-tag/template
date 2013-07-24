@@ -1,37 +1,40 @@
-Simple Backbone model compared to a Web Component Model
-
-
-var Todo = Backbone.Model.extend({
-  // Default todo attribute values
-  defaults: {
-    title: '',
-    completed: false
-  }
-});
-
-var todo1 = new Todo();
-var completed = todo1.get('completed');
-todo1.set('title', 'Hello');
-
+Simple Web Component Model using pure JS
 
 
 var Todo = xtag.register('app-todo', {
+  lifecycle: {
+    created: function(){
+      this.innerHTML = '<div class="task"></div><input type="checkbox" class="completed">';// run setters so innerHTML is populated
+
+      // set initial values from attributes
+      this.task = this.task;
+      this.completed = this.completed;
+    }
+  },
+  events: {
+    'change:delegate(.completed)': function(e){
+      e.targetElement.completed = this.hasAttribute('checked');
+    }
+  },
   accessors: {
-    title: {
-      attribute: {}
+    task: {
+      attribute: {},
+      set: function(value){
+        this.querySelector('.task').innerHTML = value;
+      }
     },
     completed: {
       attribute: {},
-      get: function(){
-        return (this.getAttribute('completed') == "true");
-      }
-    },
-    date: {
       set: function(value){
-        this.xtag.data.date = value;
+        var completed = this.querySelector('.completed');
+        if (value) {
+          completed.setAttribute('checked','') ;
+        } else {
+          completed.removeAttribute('checked');
+        }
       },
       get: function(){
-        return this.xtag.data.date;
+        return (this.getAttribute('completed') == "true");
       }
     }
   }
@@ -41,16 +44,19 @@ var Todo = xtag.register('app-todo', {
 var todo2 = document.createElement('app-todo');
 
 var todo = new Todo();   // this is an html element
-todo.title = 'Hello';
+todo.task = 'Hello';
 todo.setAttribute('completed', true);
 
 
 
 // throw it into the DOM, but it doesn't have a visual representation yet
-body.appendChild(todo);
+document.body.appendChild(todo);
 
 <body>
-  <app-todo title="Hello" completed="true"></app-todo>
+  <app-todo task="Hello World" completed="true">
+    <div class="task">Hello</div>
+    <input type="checkbox" checked class="completed">
+  </app-todo>
 </body>
 
 

@@ -1,11 +1,8 @@
-Web Component model using a Template/View
-
-
-
+Web Components using a Template/View
 
 <x-template name="todo-show">
   <template>
-    <div class="title"></div>
+    <div class="task"></div>
     <input type="checkbox" class="completed">
     <a class="edit">edit</a>
   </template>
@@ -23,7 +20,7 @@ Web Component model using a Template/View
         });
 
         this.addBindings({
-          'title:select(.title)': function(value){
+          'task:select(.task)': function(value){
             this.innerHTML = value;
           },
           'completed:select(.completed)': function(value){
@@ -41,7 +38,7 @@ Web Component model using a Template/View
 
 <x-template name="todo-edit">
   <template>
-    <input class="title">
+    <input class="task">
     <button>Save</button>
   </template>
   <script type="template">
@@ -53,14 +50,14 @@ Web Component model using a Template/View
             self.updateProperties(e.templateTarget, {'completed': this.hasAttribute('checked') });
           },
           'click:delegate(button)': function(e){
-            var title = e.templateTarget.querySelector('.title').value;
-            self.updateProperties(e.templateTarget, {'title': title });
+            var task = e.templateTarget.querySelector('.task').value;
+            self.updateProperties(e.templateTarget, {'task': task });
             e.templateTarget.template = 'todo-show';
           }
         });
 
         this.addBindings({
-          'title:select(.title)': function(value){
+          'task:select(.task)': function(value){
             this.innerHTML = value;
           }
         });
